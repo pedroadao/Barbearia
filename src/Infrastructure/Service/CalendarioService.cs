@@ -32,8 +32,8 @@ public sealed class CalendarioService(ICalendarioDao calendarioDao) : ICalendari
             dto.Data,
             dto.HoraInicio,
             dto.HoraFim,
-            idCliente: null,
-            disponivel: true);
+            idCliente: dto.IdCliente,
+            disponivel: dto.IdCliente is null);
 
         var criado = await calendarioDao.AddAsync(calendario, cancellationToken);
 

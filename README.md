@@ -46,19 +46,29 @@ Existe uma única tabela `usuario`, usada tanto para **Barbeiro** quanto para **
 
 ### Com Docker (recomendado)
 
+O `docker-compose.yml` deste repositório sobe três serviços:
+
+- `postgres` — banco de dados Postgres.
+- `api` — a API .NET, construída a partir do `Dockerfile` deste repositório.
+- `web` — o frontend React (repositório irmão `BarbeariaReact`, localizado em `../BarbeariaReact`), construído com Vite e servido via nginx.
+
 1. Copie `.env.developer` (ambiente de desenvolvimento) ou `.env` (configuração "de produção" local) para o arquivo lido pelo Compose, ou aponte o `--env-file` diretamente:
 
 ```bash
 docker compose --env-file .env.developer up -d --build
 ```
 
-2. A API fica disponível em `http://localhost:${API_PORT}` (porta definida no arquivo `.env` usado) e o Swagger em `/swagger`.
+2. Serviços disponíveis após a subida:
+   - API em `http://localhost:${API_PORT}` (Swagger em `/swagger`).
+   - Frontend em `http://localhost:${WEB_PORT}`.
 
 3. Para derrubar os containers:
 
 ```bash
 docker compose down
 ```
+
+> O serviço `web` espera encontrar o repositório `BarbeariaReact` no diretório irmão (`../BarbeariaReact`). Se o frontend não estiver clonado nesse local, remova ou ajuste o serviço `web` no `docker-compose.yml`, ou clone-o ao lado deste repositório antes de subir o Compose.
 
 ### Localmente (sem Docker)
 
@@ -81,6 +91,7 @@ dotnet run --project src/API
 | `POSTGRES_PORT` | Porta exposta do Postgres no host |
 | `ASPNETCORE_ENVIRONMENT` | Ambiente do ASP.NET Core (ex.: `Development`) |
 | `API_PORT` | Porta exposta da API no host |
+| `WEB_PORT` | Porta exposta do frontend (nginx) no host |
 
 `.env` e `.env.developer` não são versionados (estão no `.gitignore`); crie-os localmente a partir das variáveis acima.
 

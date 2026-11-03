@@ -23,7 +23,8 @@ public sealed class AgendamentosControllerTests
         IdBarbeiro: 1,
         Data: new DateOnly(2026, 11, 10),
         HoraInicio: new TimeOnly(9, 0),
-        HoraFim: new TimeOnly(10, 0));
+        HoraFim: new TimeOnly(10, 0),
+        IdCliente: null);
 
     [Fact]
     public async Task Create_DeveRetornarCreatedComHorarioDisponivel()
@@ -37,6 +38,19 @@ public sealed class AgendamentosControllerTests
         dto.Id.Should().BeGreaterThan(0);
         dto.Disponivel.Should().BeTrue();
         dto.IdCliente.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Create_ComClienteInformado_DeveSalvarIdClienteEMarcarComoIndisponivel()
+    {
+        var controller = CriarController();
+
+        var resultado = await controller.Create(CriarDtoValido() with { IdCliente = 2 }, CancellationToken.None);
+
+        var created = resultado.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var dto = created.Value.Should().BeOfType<CalendarioDto>().Subject;
+        dto.IdCliente.Should().Be(2);
+        dto.Disponivel.Should().BeFalse();
     }
 
     [Fact]

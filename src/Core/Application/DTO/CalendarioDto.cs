@@ -15,7 +15,8 @@ public sealed record CreateCalendarioDto(
     int IdBarbeiro,
     DateOnly Data,
     TimeOnly HoraInicio,
-    TimeOnly HoraFim);
+    TimeOnly HoraFim,
+    int? IdCliente);
 
 public sealed record UpdateCalendarioDto(
     int IdBarbeiro,
