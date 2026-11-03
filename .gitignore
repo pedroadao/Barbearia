@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+
+## Rider / JetBrains
+.idea/
+
+## macOS
+.DS_Store
+
+## Secrets
+appsettings.*.local.json
+*.pfx
+.env
+.env.developer
+
+## Instruções de IA
+CLAUDE.md

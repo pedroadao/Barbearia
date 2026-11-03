@@ -1,0 +1,19 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/API/">
+    <Project Path="src/API/Barbearia.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/" />
+  <Folder Name="/src/Core/Application/">
+    <Project Path="src/Core/Application/Barbearia.Application.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/Domain/">
+    <Project Path="src/Core/Domain/Barbearia.Domain.csproj" />
+  </Folder>
+  <Folder Name="/src/Infrastructure/">
+    <Project Path="src/Infrastructure/Barbearia.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Barbearia.Tests/Barbearia.Tests.csproj" />
+  </Folder>
+</Solution>
