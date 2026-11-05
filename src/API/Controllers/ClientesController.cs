@@ -1,11 +1,13 @@
 using Barbearia.Api.Extensions;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Service.Interface;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Barbearia.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("clientes")]
 public sealed class ClientesController(IClienteService clienteService) : ControllerBase
 {

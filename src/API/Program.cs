@@ -4,6 +4,7 @@ using Barbearia.Infrastructure.Dao.Interface;
 using Barbearia.Infrastructure.Service;
 using Barbearia.Infrastructure.Service.Interface;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,21 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
+
+var authenticationAuthority = builder.Configuration["Authentication:Authority"]
+    ?? throw new InvalidOperationException("Authentication:Authority não configurado.");
+var authenticationAudience = builder.Configuration["Authentication:Audience"]
+    ?? throw new InvalidOperationException("Authentication:Audience não configurado.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = authenticationAuthority;
+        options.Audience = authenticationAudience;
+    });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -68,6 +84,9 @@ app.UseSwaggerUI(options =>
 app.UseHttpsRedirection();
 
 app.UseCors(FrontendCorsPolicy);
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
