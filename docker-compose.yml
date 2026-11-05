@@ -36,6 +36,14 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: "http://localhost:${API_PORT}"
+        # Authentication deve estar rodando via seu próprio docker-compose (porta
+        # https publicada 8443). O fluxo OAuth é navegação completa do browser do
+        # host, não container-para-container, por isso localhost e não o nome do
+        # serviço Docker.
+        VITE_AUTH_BASE_URL: "https://localhost:8443"
+        VITE_OIDC_CLIENT_ID: "barbearia-spa-client"
+        VITE_OIDC_REDIRECT_URI: "http://localhost:${WEB_PORT}/callback"
+        VITE_OIDC_SCOPE: "openid email profile offline_access"
     restart: unless-stopped
     depends_on:
       - api
