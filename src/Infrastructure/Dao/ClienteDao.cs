@@ -12,7 +12,18 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
         var usuario = await context.Usuarios
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente,
+                u => u.Id == id && u.IdStatus == StatusIds.Ativo,
+                cancellationToken);
+
+        return usuario is null ? null : ParaCliente(usuario);
+    }
+
+    public async Task<Cliente?> GetByAuthUserIdAsync(string authUserId, CancellationToken cancellationToken)
+    {
+        var usuario = await context.Usuarios
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => u.AuthUserId == authUserId && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         return usuario is null ? null : ParaCliente(usuario);
@@ -22,13 +33,13 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
     {
         var usuarios = await context.Usuarios
             .AsNoTracking()
-            .Where(u => u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente)
+            .Where(u => u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente && u.IdStatus == StatusIds.Ativo)
             .ToListAsync(cancellationToken);
 
         return usuarios.Select(ParaCliente).ToList();
     }
 
-    public async Task<Cliente> AddAsync(Cliente cliente, CancellationToken cancellationToken)
+    public async Task<Cliente> AddAsync(Cliente cliente, string authUserId, CancellationToken cancellationToken)
     {
         var usuario = new Usuario(
             cliente.Nome,
@@ -37,6 +48,8 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
             cliente.Instagram,
             cliente.DataNascimento,
             cliente.IdTipoUsuario);
+
+        usuario.AssociarAuthUser(authUserId);
 
         await context.Usuarios.AddAsync(usuario, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
@@ -52,17 +65,19 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
         string? instagram,
         DateOnly dataNascimento,
         int idTipoUsuario,
+        bool mostrarCadastroSempre,
         CancellationToken cancellationToken)
     {
         var usuario = await context.Usuarios
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente,
+                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         if (usuario is null)
             return false;
 
         usuario.Atualizar(nome, email, telefone, instagram, dataNascimento, idTipoUsuario);
+        usuario.DefinirPreferenciaCadastro(mostrarCadastroSempre);
         await context.SaveChangesAsync(cancellationToken);
 
         return true;
@@ -72,13 +87,13 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
     {
         var usuario = await context.Usuarios
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente,
+                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         if (usuario is null)
             return false;
 
-        context.Usuarios.Remove(usuario);
+        usuario.MarcarComoExcluido();
         await context.SaveChangesAsync(cancellationToken);
 
         return true;
@@ -95,6 +110,8 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
             usuario.IdTipoUsuario);
 
         cliente.DefinirId(usuario.Id);
+        cliente.AssociarAuthUser(usuario.AuthUserId);
+        cliente.DefinirPreferenciaCadastro(usuario.MostrarCadastroSempre);
 
         return cliente;
     }

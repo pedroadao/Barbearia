@@ -7,11 +7,17 @@ public interface IClienteService
 {
     Task<Result<ClienteDto>> ObterPorIdAsync(int id, CancellationToken cancellationToken);
 
+    Task<Result<ClienteDto>> ObterPorAuthUserIdAsync(string authUserId, CancellationToken cancellationToken);
+
     Task<Result<IReadOnlyList<ClienteDto>>> ObterTodosAsync(CancellationToken cancellationToken);
 
-    Task<Result<ClienteDto>> CriarAsync(CreateClienteDto dto, CancellationToken cancellationToken);
+    Task<Result<ClienteDto>> CriarAsync(CreateClienteDto dto, string authUserId, CancellationToken cancellationToken);
 
-    Task<Result<ClienteDto>> AtualizarAsync(int id, UpdateClienteDto dto, CancellationToken cancellationToken);
+    Task<Result<ClienteDto>> AtualizarAsync(
+        int id,
+        UpdateClienteDto dto,
+        string authUserId,
+        CancellationToken cancellationToken);
 
     Task<Result> RemoverAsync(int id, CancellationToken cancellationToken);
 }

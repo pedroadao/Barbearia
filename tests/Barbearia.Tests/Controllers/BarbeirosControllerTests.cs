@@ -72,7 +72,20 @@ public sealed class BarbeirosControllerTests
         var controller = new BarbeirosController(new BarbeiroService(barbeiroDao));
 
         await controller.Create(CriarDtoValido(), CancellationToken.None);
-        await new ClientesController(new ClienteService(clienteDao)).Create(
+
+        var clientesController = new ClientesController(new ClienteService(clienteDao))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+                {
+                    User = new System.Security.Claims.ClaimsPrincipal(
+                        new System.Security.Claims.ClaimsIdentity(
+                            [new System.Security.Claims.Claim("sub", "auth-user-maria")], "Test")),
+                },
+            },
+        };
+        await clientesController.Create(
             new CreateClienteDto("Maria", "maria@email.com", "11988888888", null,
                 new DateOnly(1995, 1, 1), InMemoryAppDbContextFactory.IdTipoUsuarioCliente),
             CancellationToken.None);

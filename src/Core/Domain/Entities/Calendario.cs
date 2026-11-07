@@ -1,3 +1,5 @@
+using Barbearia.Domain.Common;
+
 namespace Barbearia.Domain.Entities;
 
 public sealed class Calendario
@@ -39,4 +41,13 @@ public sealed class Calendario
     public Usuario? Barbeiro { get; private set; }
 
     public Usuario? Cliente { get; private set; }
+
+    public int IdStatus { get; private set; } = StatusIds.Ativo;
+
+    public Status? Status { get; private set; }
+    
+    public void MarcarComoExcluido()
+    {
+        IdStatus = StatusIds.Excluido;
+    }
 }

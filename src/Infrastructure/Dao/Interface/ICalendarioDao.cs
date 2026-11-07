@@ -10,6 +10,20 @@ public interface ICalendarioDao
 
     Task<Calendario> AddAsync(Calendario calendario, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Verifica se já existe, para o mesmo barbeiro e data, algum horário cujo
+    /// intervalo [horaInicio, horaFim) sobreponha o informado. Use
+    /// <paramref name="idParaIgnorar"/> ao validar uma atualização, para não
+    /// conflitar com o próprio registro sendo alterado.
+    /// </summary>
+    Task<bool> ExisteConflitoAsync(
+        int idBarbeiro,
+        DateOnly data,
+        TimeOnly horaInicio,
+        TimeOnly horaFim,
+        int? idParaIgnorar,
+        CancellationToken cancellationToken);
+
     Task<bool> UpdateAsync(
         int id,
         int idBarbeiro,

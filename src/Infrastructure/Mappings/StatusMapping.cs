@@ -1,3 +1,4 @@
+using Barbearia.Domain.Common;
 using Barbearia.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -19,5 +20,9 @@ public sealed class StatusMapping : IEntityTypeConfiguration<Status>
             .HasColumnName("descricao")
             .HasMaxLength(50)
             .IsRequired();
+
+        builder.HasData(
+            new { Id = StatusIds.Ativo, Descricao = "Ativo" },
+            new { Id = StatusIds.Excluido, Descricao = "Excluído" });
     }
 }

@@ -27,8 +27,17 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      # host.docker.internal porque o Authentication roda em outro docker-compose
+      # (outro container); "localhost" de dentro deste container seria ele mesmo.
+      Authentication__Authority: "https://host.docker.internal:8443/"
+      Authentication__Audience: "authentication-api"
+      # Diferente de Authority: é a URL pela qual o navegador acessa o Authentication
+      # e que por isso fica no "iss" dos tokens emitidos.
+      Authentication__Issuer: "https://localhost:8443/"
     ports:
       - "${API_PORT}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   web:
     build:

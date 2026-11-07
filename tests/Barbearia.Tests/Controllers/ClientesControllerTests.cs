@@ -1,22 +1,39 @@
+using System.Security.Claims;
 using Barbearia.Api.Controllers;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Service;
 using Barbearia.Tests.Infrastructure;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Barbearia.Tests.Controllers;
 
 public sealed class ClientesControllerTests
 {
-    private static ClientesController CriarController()
+    private const string AuthUserId = "auth-user-1";
+
+    private static ClientesController CriarController(
+        string? authUserId = AuthUserId,
+        Barbearia.Infrastructure.AppDbContext? context = null)
     {
-        var context = InMemoryAppDbContextFactory.Criar();
+        context ??= InMemoryAppDbContextFactory.Criar();
         var dao = new ClienteDao(context);
         var service = new ClienteService(dao);
 
-        return new ClientesController(service);
+        var controller = new ClientesController(service);
+
+        var usuario = authUserId is null
+            ? new ClaimsPrincipal(new ClaimsIdentity())
+            : new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", authUserId)], "Test"));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = usuario },
+        };
+
+        return controller;
     }
 
     private static CreateClienteDto CriarDtoValido() => new(
@@ -26,6 +43,10 @@ public sealed class ClientesControllerTests
         Instagram: null,
         DataNascimento: new DateOnly(1995, 3, 10),
         IdTipoUsuario: InMemoryAppDbContextFactory.IdTipoUsuarioCliente);
+
+    private static UpdateClienteDto CriarDtoAtualizadoValido() => new(
+        "Maria Oliveira", "maria.oliveira@email.com", "11911112222", "@mariaoliveira",
+        new DateOnly(1995, 3, 10), InMemoryAppDbContextFactory.IdTipoUsuarioCliente, MostrarCadastroSempre: false);
 
     [Fact]
     public async Task Create_DeveRetornarCreatedComIdGeradoPeloBanco()
@@ -38,6 +59,49 @@ public sealed class ClientesControllerTests
         var dto = created.Value.Should().BeOfType<ClienteDto>().Subject;
         dto.Id.Should().BeGreaterThan(0);
         dto.Email.Should().Be("maria@email.com");
+    }
+
+    [Fact]
+    public async Task Create_SemUsuarioAutenticado_DeveRetornarUnauthorized()
+    {
+        var controller = CriarController(authUserId: null);
+
+        var resultado = await controller.Create(CriarDtoValido(), CancellationToken.None);
+
+        resultado.Should().BeOfType<UnauthorizedResult>();
+    }
+
+    [Fact]
+    public async Task Create_QuandoAuthUserJaPossuiCadastro_DeveRetornarConflict()
+    {
+        var controller = CriarController();
+        await controller.Create(CriarDtoValido(), CancellationToken.None);
+
+        var resultado = await controller.Create(CriarDtoValido(), CancellationToken.None);
+
+        resultado.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMe_QuandoAindaNaoTemCadastro_DeveRetornarNotFound()
+    {
+        var controller = CriarController();
+
+        var resultado = await controller.GetMe(CancellationToken.None);
+
+        resultado.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMe_QuandoJaTemCadastro_DeveRetornarOCliente()
+    {
+        var controller = CriarController();
+        await controller.Create(CriarDtoValido(), CancellationToken.None);
+
+        var resultado = await controller.GetMe(CancellationToken.None);
+
+        var ok = resultado.Should().BeOfType<OkObjectResult>().Subject;
+        ok.Value.Should().BeOfType<ClienteDto>().Which.Email.Should().Be("maria@email.com");
     }
 
     [Fact]
@@ -57,14 +121,26 @@ public sealed class ClientesControllerTests
         var criado = (CreatedAtActionResult)await controller.Create(CriarDtoValido(), CancellationToken.None);
         var id = ((ClienteDto)criado.Value!).Id;
 
-        var dtoAtualizado = new UpdateClienteDto(
-            "Maria Oliveira", "maria.oliveira@email.com", "11911112222", "@mariaoliveira",
-            new DateOnly(1995, 3, 10), InMemoryAppDbContextFactory.IdTipoUsuarioCliente);
-
-        var resultado = await controller.Update(id, dtoAtualizado, CancellationToken.None);
+        var resultado = await controller.Update(id, CriarDtoAtualizadoValido(), CancellationToken.None);
 
         var ok = resultado.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().BeOfType<ClienteDto>().Which.Nome.Should().Be("Maria Oliveira");
+        var dto = ok.Value.Should().BeOfType<ClienteDto>().Subject;
+        dto.Nome.Should().Be("Maria Oliveira");
+        dto.MostrarCadastroSempre.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Update_QuandoClienteNaoPertenceAoUsuarioAutenticado_DeveRetornarNotFound()
+    {
+        var context = InMemoryAppDbContextFactory.Criar();
+        var controllerDoDono = CriarController(authUserId: "auth-user-1", context: context);
+        var criado = (CreatedAtActionResult)await controllerDoDono.Create(CriarDtoValido(), CancellationToken.None);
+        var id = ((ClienteDto)criado.Value!).Id;
+
+        var controllerDeOutroUsuario = CriarController(authUserId: "auth-user-2", context: context);
+        var resultado = await controllerDeOutroUsuario.Update(id, CriarDtoAtualizadoValido(), CancellationToken.None);
+
+        resultado.Should().BeOfType<NotFoundObjectResult>();
     }
 
     [Fact]

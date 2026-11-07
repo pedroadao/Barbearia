@@ -12,7 +12,7 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
         var usuario = await context.Usuarios
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro,
+                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         return usuario is null ? null : ParaBarbeiro(usuario);
@@ -22,17 +22,12 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
     {
         var usuarios = await context.Usuarios
             .AsNoTracking()
-            .Where(u => u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro)
+            .Where(u => u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro && u.IdStatus == StatusIds.Ativo)
             .ToListAsync(cancellationToken);
 
         return usuarios.Select(ParaBarbeiro).ToList();
     }
 
-    // Decisão de design: como o Id agora é gerado pelo banco (identity), o objeto
-    // "barbeiro" recebido aqui ainda tem Id = 0 (default de int). Por isso criamos
-    // um Usuario novo a partir dos campos do barbeiro, inserimos, e devolvemos um
-    // Barbeiro reconstruído com o Id real que o Postgres gerou — é esse retorno que
-    // o Service usa para montar o BarbeiroDto corretamente.
     public async Task<Barbeiro> AddAsync(Barbeiro barbeiro, CancellationToken cancellationToken)
     {
         var usuario = new Usuario(
@@ -61,7 +56,7 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
     {
         var usuario = await context.Usuarios
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro,
+                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         if (usuario is null)
@@ -77,13 +72,13 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
     {
         var usuario = await context.Usuarios
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro,
+                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         if (usuario is null)
             return false;
 
-        context.Usuarios.Remove(usuario);
+        usuario.MarcarComoExcluido();
         await context.SaveChangesAsync(cancellationToken);
 
         return true;

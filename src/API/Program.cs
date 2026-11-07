@@ -1,3 +1,4 @@
+using Barbearia.Api.Authorization;
 using Barbearia.Infrastructure;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Dao.Interface;
@@ -23,6 +24,11 @@ var authenticationAuthority = builder.Configuration["Authentication:Authority"]
     ?? throw new InvalidOperationException("Authentication:Authority não configurado.");
 var authenticationAudience = builder.Configuration["Authentication:Audience"]
     ?? throw new InvalidOperationException("Authentication:Audience não configurado.");
+// O "iss" emitido nos tokens é a URL pela qual o navegador acessa o Authentication
+// (ex.: https://localhost:8443/). Authority pode ser outra URL (ex.: via Docker,
+// host.docker.internal) só para esta API buscar o documento de metadados/JWKS, por
+// isso o issuer esperado na validação precisa ser configurável separadamente.
+var authenticationIssuer = builder.Configuration["Authentication:Issuer"] ?? authenticationAuthority;
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -30,9 +36,34 @@ builder.Services
     {
         options.Authority = authenticationAuthority;
         options.Audience = authenticationAudience;
+        options.TokenValidationParameters.ValidIssuer = authenticationIssuer;
+
+        if (builder.Environment.IsDevelopment())
+        {
+            // O certificado HTTPS de desenvolvimento do Authentication é autoassinado
+            // (só o navegador do host confia nele, manualmente). Isso permite que esta
+            // API, rodando em outro container, busque o documento de metadados OIDC e
+            // o JWKS sem precisar importar esse certificado no container.
+            options.BackchannelHttpHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            };
+        }
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // RequireAssertion em vez de Roles= no [Authorize]: o handler JWT pode manter
+    // o claim de papel como "role" (nome curto emitido pelo OpenIddict) ou remapear
+    // para a URI longa ClaimTypes.Role, dependendo do ambiente (mesma ambiguidade
+    // já tratada em ObterAuthUserId() para o claim "sub") — checar os dois evita
+    // depender de qual delas está em vigor.
+    options.AddPolicy(Roles.Administrador, policy =>
+        policy.RequireAssertion(context =>
+            context.User.Claims.Any(claim =>
+                (claim.Type == "role" || claim.Type == System.Security.Claims.ClaimTypes.Role)
+                && claim.Value == Roles.Administrador)));
+});
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();

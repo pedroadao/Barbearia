@@ -8,6 +8,7 @@ API REST para gerenciamento de uma barbearia, desenvolvida para fins de estudo c
 - ASP.NET Core Web API (Controllers)
 - Entity Framework Core 10 + Npgsql (PostgreSQL)
 - FluentValidation
+- Autenticação JWT Bearer (OAuth 2.0/OIDC) via projeto `Authentication`
 - Swagger / OpenAPI
 - xUnit + FluentAssertions (testes)
 - Docker / Docker Compose
@@ -25,6 +26,7 @@ src/
 │   └── Mappings/          # Configuração do EF Core (IEntityTypeConfiguration)
 │   └── Migrations/        # Migrations do EF Core
 └── API/
+    ├── Authorization/      # Roles (ex.: Administrador)
     ├── Controllers/        # Endpoints HTTP
     └── Extensions/         # Mapeamento de Result -> IActionResult
 tests/
@@ -35,12 +37,22 @@ Fluxo de uma requisição: `Controller` → `Service` → `Dao` → `AppDbContex
 
 ### Modelo de dados
 
-Existe uma única tabela `usuario`, usada tanto para **Barbeiro** quanto para **Cliente**. A diferenciação é feita pelo campo `IdTipoUsuario`, que referencia `tipo_usuario` (`Descricao` = "Barbeiro" ou "Cliente"). `Barbeiro` e `Cliente` são subclasses de `Usuario` em C#, mas não possuem mapeamento próprio no EF Core.
+Existe uma única tabela `usuario`, usada tanto para **Barbeiro** quanto para **Cliente**. A diferenciação é feita pelo campo `IdTipoUsuario`, que referencia `tipo_usuario` (`Descricao` = "Barbeiro", "Cliente" ou "Administrador"). `Barbeiro` e `Cliente` são subclasses de `Usuario` em C#, mas não possuem mapeamento próprio no EF Core.
 
 - `status` — Id, Descricao (ex.: Ativo/Inativo)
 - `tipo_usuario` — Id, Descricao, IdStatus
-- `usuario` — Id, Nome, Email, Telefone, Instagram, DataNascimento, IdTipoUsuario
+- `usuario` — Id, Nome, Email, Telefone, Instagram, DataNascimento, IdTipoUsuario, AuthUserId (id do usuário no Authentication), MostrarCadastroSempre
 - `calendario` — Id, IdBarbeiro, Data, HoraInicio, HoraFim, IdCliente (nulo = horário livre), Disponivel
+
+## Autenticação e autorização
+
+A API não emite tokens: ela valida JWTs emitidos pelo projeto **Authentication** (`../Authentication`), que roda em outro `docker-compose`. Todos os controllers exigem `[Authorize]`.
+
+- Configuração em `Authentication:Authority`, `Authentication:Audience` (`authentication-api`) e, opcionalmente, `Authentication:Issuer` (URL pela qual o navegador acessa o Authentication, presente no `iss` do token; padrão = Authority).
+- O vínculo entre o token e o cadastro local é feito pelo claim `sub`, gravado em `usuario.auth_user_id`.
+- A policy `Administrador` exige a role `Administrador` no token e protege: `GET /clientes/{id}`, `DELETE /clientes/{id}` e `GET /barbeiros/{id}`, `POST`, `PUT` e `DELETE` de `/barbeiros`. As demais rotas aceitam qualquer usuário autenticado.
+- CORS liberado para o frontend (`http://localhost:5174` e `http://localhost:8082`).
+- O certificado de desenvolvimento do Authentication é autoassinado; não armazene segredos no repositório.
 
 ## Como executar
 
@@ -93,15 +105,19 @@ dotnet run --project src/API
 | `API_PORT` | Porta exposta da API no host |
 | `WEB_PORT` | Porta exposta do frontend (nginx) no host |
 
+As configurações `Authentication__Authority`, `Authentication__Audience` e `Authentication__Issuer` são definidas diretamente no `docker-compose.yml`.
+
 `.env` e `.env.developer` não são versionados (estão no `.gitignore`); crie-os localmente a partir das variáveis acima.
 
 ## Endpoints principais
 
 | Recurso | Rota | Métodos |
 |---|---|---|
-| Barbeiros | `/barbeiros` | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` |
-| Clientes | `/clientes` | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` |
+| Barbeiros | `/barbeiros` | `GET`, `GET /{id}` (Admin), `POST` (Admin), `PUT /{id}` (Admin), `DELETE /{id}` (Admin) |
+| Clientes | `/clientes` | `GET`, `GET /me`, `GET /{id}` (Admin), `POST`, `PUT /{id}`, `DELETE /{id}` (Admin) |
 | Agendamentos | `/agendamentos` | `GET`, `GET /{id}`, `POST`, `DELETE /{id}` |
+
+Todas as rotas exigem `Authorization: Bearer <token>`; "(Admin)" exige a role `Administrador`.
 
 Documentação interativa disponível via Swagger em `/swagger` com a API em execução.
 
@@ -112,7 +128,3 @@ dotnet test
 ```
 
 Os testes cobrem o fluxo Controller → Service → DAO → EF Core usando o provider **InMemory** do EF Core, sem gravar dados permanentemente no Postgres real.
-
-## Restrições do projeto
-
-Este repositório segue as diretrizes definidas em `CLAUDE.md` (não versionado), incluindo: não alterar Migrations existentes, não adicionar pacotes NuGet sem autorização explícita, não expor Entidades de Domínio diretamente nos Endpoints, e tratar warnings como erros de build.

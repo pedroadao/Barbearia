@@ -1,3 +1,4 @@
+using Barbearia.Domain.Common;
 using Barbearia.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -37,6 +38,11 @@ public sealed class CalendarioMapping : IEntityTypeConfiguration<Calendario>
             .HasColumnName("disponivel")
             .IsRequired();
 
+        builder.Property(c => c.IdStatus)
+            .HasColumnName("id_status")
+            .HasDefaultValue(StatusIds.Ativo)
+            .IsRequired();
+
         builder.HasIndex(c => new { c.IdBarbeiro, c.Data, c.HoraInicio })
             .IsUnique();
 
@@ -48,6 +54,11 @@ public sealed class CalendarioMapping : IEntityTypeConfiguration<Calendario>
         builder.HasOne(c => c.Cliente)
             .WithMany()
             .HasForeignKey(c => c.IdCliente)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(c => c.Status)
+            .WithMany()
+            .HasForeignKey(c => c.IdStatus)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

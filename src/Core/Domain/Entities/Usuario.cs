@@ -1,3 +1,5 @@
+using Barbearia.Domain.Common;
+
 namespace Barbearia.Domain.Entities;
 
 public class Usuario
@@ -32,13 +34,29 @@ public class Usuario
     public int IdTipoUsuario { get; private set; }
 
     public TipoUsuario? TipoUsuario { get; private set; }
+    public string? AuthUserId { get; private set; }
+    public bool MostrarCadastroSempre { get; private set; } = true;
+    public int IdStatus { get; private set; } = StatusIds.Ativo;
+    public Status? Status { get; private set; }
 
-    // Usado por BarbeiroDao/ClienteDao para reconstruir um Barbeiro/Cliente com o Id
-    // real gerado pelo banco após o INSERT (eles não são tipos mapeados pelo EF, então
-    // o EF nunca materializa um Barbeiro/Cliente diretamente com o Id já preenchido).
     public void DefinirId(int id)
     {
         Id = id;
+    }
+
+    public void AssociarAuthUser(string? authUserId)
+    {
+        AuthUserId = authUserId;
+    }
+
+    public void MarcarComoExcluido()
+    {
+        IdStatus = StatusIds.Excluido;
+    }
+
+    public void DefinirPreferenciaCadastro(bool mostrarCadastroSempre)
+    {
+        MostrarCadastroSempre = mostrarCadastroSempre;
     }
 
     public void Atualizar(

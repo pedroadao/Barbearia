@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Barbearia.Api.Authorization;
 using Barbearia.Api.Extensions;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Service.Interface;
@@ -19,6 +21,19 @@ public sealed class ClientesController(IClienteService clienteService) : Control
         return Ok(resultado.Value);
     }
 
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMe(CancellationToken cancellationToken)
+    {
+        var authUserId = ObterAuthUserId();
+        if (authUserId is null)
+            return Unauthorized();
+
+        var resultado = await clienteService.ObterPorAuthUserIdAsync(authUserId, cancellationToken);
+
+        return resultado.IsSuccess ? Ok(resultado.Value) : resultado.ToErrorActionResult(this);
+    }
+
+    [Authorize(Policy = Roles.Administrador)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
@@ -30,7 +45,11 @@ public sealed class ClientesController(IClienteService clienteService) : Control
     [HttpPost]
     public async Task<IActionResult> Create(CreateClienteDto dto, CancellationToken cancellationToken)
     {
-        var resultado = await clienteService.CriarAsync(dto, cancellationToken);
+        var authUserId = ObterAuthUserId();
+        if (authUserId is null)
+            return Unauthorized();
+
+        var resultado = await clienteService.CriarAsync(dto, authUserId, cancellationToken);
 
         return resultado.IsSuccess
             ? CreatedAtAction(nameof(GetById), new { id = resultado.Value.Id }, resultado.Value)
@@ -40,11 +59,16 @@ public sealed class ClientesController(IClienteService clienteService) : Control
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, UpdateClienteDto dto, CancellationToken cancellationToken)
     {
-        var resultado = await clienteService.AtualizarAsync(id, dto, cancellationToken);
+        var authUserId = ObterAuthUserId();
+        if (authUserId is null)
+            return Unauthorized();
+
+        var resultado = await clienteService.AtualizarAsync(id, dto, authUserId, cancellationToken);
 
         return resultado.IsSuccess ? Ok(resultado.Value) : resultado.ToErrorActionResult(this);
     }
 
+    [Authorize(Policy = Roles.Administrador)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {
@@ -52,4 +76,9 @@ public sealed class ClientesController(IClienteService clienteService) : Control
 
         return resultado.IsSuccess ? NoContent() : resultado.ToErrorActionResult(this);
     }
+
+    // O handler JWT Bearer pode mapear o claim "sub" do token para ClaimTypes.NameIdentifier
+    // (handler legado) ou mantê-lo como "sub" (handler atual), então checa os dois.
+    private string? ObterAuthUserId() =>
+        User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier);
 }

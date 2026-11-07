@@ -1,3 +1,4 @@
+using Barbearia.Domain.Common;
 using Barbearia.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -41,12 +42,35 @@ public sealed class UsuarioMapping : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.IdTipoUsuario)
             .HasColumnName("id_tipo_usuario");
 
+        builder.Property(u => u.AuthUserId)
+            .HasColumnName("auth_user_id")
+            .HasMaxLength(100);
+
+        builder.Property(u => u.MostrarCadastroSempre)
+            .HasColumnName("mostrar_cadastro_sempre")
+            .HasDefaultValue(true)
+            .IsRequired();
+
+        builder.Property(u => u.IdStatus)
+            .HasColumnName("id_status")
+            .HasDefaultValue(StatusIds.Ativo)
+            .IsRequired();
+
         builder.HasIndex(u => u.Email)
             .IsUnique();
+
+        builder.HasIndex(u => u.AuthUserId)
+            .IsUnique()
+            .HasFilter("auth_user_id IS NOT NULL");
 
         builder.HasOne(u => u.TipoUsuario)
             .WithMany()
             .HasForeignKey(u => u.IdTipoUsuario)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(u => u.Status)
+            .WithMany()
+            .HasForeignKey(u => u.IdStatus)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

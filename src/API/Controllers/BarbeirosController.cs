@@ -1,3 +1,4 @@
+using Barbearia.Api.Authorization;
 using Barbearia.Api.Extensions;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Service.Interface;
@@ -19,6 +20,7 @@ public sealed class BarbeirosController(IBarbeiroService barbeiroService) : Cont
         return Ok(resultado.Value);
     }
 
+    [Authorize(Policy = Roles.Administrador)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken)
     {
@@ -27,6 +29,7 @@ public sealed class BarbeirosController(IBarbeiroService barbeiroService) : Cont
         return resultado.IsSuccess ? Ok(resultado.Value) : resultado.ToErrorActionResult(this);
     }
 
+    [Authorize(Policy = Roles.Administrador)]
     [HttpPost]
     public async Task<IActionResult> Create(CreateBarbeiroDto dto, CancellationToken cancellationToken)
     {
@@ -37,6 +40,7 @@ public sealed class BarbeirosController(IBarbeiroService barbeiroService) : Cont
             : resultado.ToErrorActionResult(this);
     }
 
+    [Authorize(Policy = Roles.Administrador)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, UpdateBarbeiroDto dto, CancellationToken cancellationToken)
     {
@@ -45,6 +49,7 @@ public sealed class BarbeirosController(IBarbeiroService barbeiroService) : Cont
         return resultado.IsSuccess ? Ok(resultado.Value) : resultado.ToErrorActionResult(this);
     }
 
+    [Authorize(Policy = Roles.Administrador)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
     {

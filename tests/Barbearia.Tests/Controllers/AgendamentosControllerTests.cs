@@ -54,6 +54,82 @@ public sealed class AgendamentosControllerTests
     }
 
     [Fact]
+    public async Task Create_ComHorarioSobrepostoParaOMesmoBarbeiro_DeveRetornarConflict()
+    {
+        var controller = CriarController();
+        await controller.Create(CriarDtoValido(), CancellationToken.None); // 09:00-10:00
+
+        var resultado = await controller.Create(
+            CriarDtoValido() with { HoraInicio = new TimeOnly(9, 30), HoraFim = new TimeOnly(10, 30) },
+            CancellationToken.None);
+
+        resultado.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [Fact]
+    public async Task Create_ComHorarioSobrepostoParaOutroBarbeiro_DeveRetornarCreated()
+    {
+        var controller = CriarController();
+        await controller.Create(CriarDtoValido(), CancellationToken.None); // barbeiro 1, 09:00-10:00
+
+        var resultado = await controller.Create(CriarDtoValido() with { IdBarbeiro = 2 }, CancellationToken.None);
+
+        resultado.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Fact]
+    public async Task Create_ComHorarioAdjacenteSemSobreposicao_DeveRetornarCreated()
+    {
+        var controller = CriarController();
+        await controller.Create(CriarDtoValido(), CancellationToken.None); // 09:00-10:00
+
+        var resultado = await controller.Create(
+            CriarDtoValido() with { HoraInicio = new TimeOnly(10, 0), HoraFim = new TimeOnly(11, 0) },
+            CancellationToken.None);
+
+        resultado.Should().BeOfType<CreatedAtActionResult>();
+    }
+
+    [Theory]
+    [InlineData(8, 30, 9, 30)] // antes das 09:00
+    [InlineData(18, 30, 19, 30)] // depois das 19:00
+    public async Task Create_ComHorarioForaDoFuncionamento_DeveRetornarBadRequest(
+        int horaInicioHora, int horaInicioMinuto, int horaFimHora, int horaFimMinuto)
+    {
+        var controller = CriarController();
+
+        var resultado = await controller.Create(
+            CriarDtoValido() with
+            {
+                HoraInicio = new TimeOnly(horaInicioHora, horaInicioMinuto),
+                HoraFim = new TimeOnly(horaFimHora, horaFimMinuto),
+            },
+            CancellationToken.None);
+
+        resultado.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Theory]
+    [InlineData(9, 10, 10, 0)] // início não múltiplo de 30 minutos
+    [InlineData(9, 0, 9, 45)] // término não múltiplo de 30 minutos
+    [InlineData(10, 0, 9, 30)] // término antes do início
+    public async Task Create_ComIntervaloInvalido_DeveRetornarBadRequest(
+        int horaInicioHora, int horaInicioMinuto, int horaFimHora, int horaFimMinuto)
+    {
+        var controller = CriarController();
+
+        var resultado = await controller.Create(
+            CriarDtoValido() with
+            {
+                HoraInicio = new TimeOnly(horaInicioHora, horaInicioMinuto),
+                HoraFim = new TimeOnly(horaFimHora, horaFimMinuto),
+            },
+            CancellationToken.None);
+
+        resultado.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
     public async Task GetById_QuandoAgendamentoExiste_DeveRetornarOk()
     {
         var controller = CriarController();

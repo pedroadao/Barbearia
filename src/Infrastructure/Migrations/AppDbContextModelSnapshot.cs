@@ -55,9 +55,17 @@ namespace Barbearia.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("id_cliente");
 
+                    b.Property<int>("IdStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("id_status");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IdCliente");
+
+                    b.HasIndex("IdStatus");
 
                     b.HasIndex("IdBarbeiro", "Data", "HoraInicio")
                         .IsUnique();
@@ -83,6 +91,18 @@ namespace Barbearia.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("status", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Descricao = "Ativo"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Descricao = "Excluído"
+                        });
                 });
 
             modelBuilder.Entity("Barbearia.Domain.Entities.TipoUsuario", b =>
@@ -120,6 +140,11 @@ namespace Barbearia.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AuthUserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("auth_user_id");
+
                     b.Property<DateOnly>("DataNascimento")
                         .HasColumnType("date")
                         .HasColumnName("data_nascimento");
@@ -130,6 +155,12 @@ namespace Barbearia.Infrastructure.Migrations
                         .HasColumnType("character varying(150)")
                         .HasColumnName("email");
 
+                    b.Property<int>("IdStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("id_status");
+
                     b.Property<int>("IdTipoUsuario")
                         .HasColumnType("integer")
                         .HasColumnName("id_tipo_usuario");
@@ -138,6 +169,12 @@ namespace Barbearia.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("instagram");
+
+                    b.Property<bool>("MostrarCadastroSempre")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("mostrar_cadastro_sempre");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -153,8 +190,14 @@ namespace Barbearia.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AuthUserId")
+                        .IsUnique()
+                        .HasFilter("auth_user_id IS NOT NULL");
+
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("IdStatus");
 
                     b.HasIndex("IdTipoUsuario");
 
@@ -174,9 +217,17 @@ namespace Barbearia.Infrastructure.Migrations
                         .HasForeignKey("IdCliente")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Barbearia.Domain.Entities.Status", "Status")
+                        .WithMany()
+                        .HasForeignKey("IdStatus")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Barbeiro");
 
                     b.Navigation("Cliente");
+
+                    b.Navigation("Status");
                 });
 
             modelBuilder.Entity("Barbearia.Domain.Entities.TipoUsuario", b =>
@@ -192,11 +243,19 @@ namespace Barbearia.Infrastructure.Migrations
 
             modelBuilder.Entity("Barbearia.Domain.Entities.Usuario", b =>
                 {
+                    b.HasOne("Barbearia.Domain.Entities.Status", "Status")
+                        .WithMany()
+                        .HasForeignKey("IdStatus")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Barbearia.Domain.Entities.TipoUsuario", "TipoUsuario")
                         .WithMany()
                         .HasForeignKey("IdTipoUsuario")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Status");
 
                     b.Navigation("TipoUsuario");
                 });
