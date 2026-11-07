@@ -17,6 +17,7 @@ public interface IClienteService
         int id,
         UpdateClienteDto dto,
         string authUserId,
+        bool ehAdministrador,
         CancellationToken cancellationToken);
 
     Task<Result> RemoverAsync(int id, CancellationToken cancellationToken);

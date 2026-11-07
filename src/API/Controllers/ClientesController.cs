@@ -63,7 +63,7 @@ public sealed class ClientesController(IClienteService clienteService) : Control
         if (authUserId is null)
             return Unauthorized();
 
-        var resultado = await clienteService.AtualizarAsync(id, dto, authUserId, cancellationToken);
+        var resultado = await clienteService.AtualizarAsync(id, dto, authUserId, EhAdministrador(), cancellationToken);
 
         return resultado.IsSuccess ? Ok(resultado.Value) : resultado.ToErrorActionResult(this);
     }
@@ -81,4 +81,9 @@ public sealed class ClientesController(IClienteService clienteService) : Control
     // (handler legado) ou mantê-lo como "sub" (handler atual), então checa os dois.
     private string? ObterAuthUserId() =>
         User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    private bool EhAdministrador() =>
+        User?.Claims.Any(claim =>
+            (claim.Type == "role" || claim.Type == ClaimTypes.Role)
+            && claim.Value == Roles.Administrador) ?? false;
 }

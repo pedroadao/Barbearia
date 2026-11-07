@@ -12,7 +12,8 @@ RUN dotnet restore src/API/Barbearia.Api.csproj
 
 COPY src/ src/
 
-RUN dotnet publish src/API/Barbearia.Api.csproj -c Release -o /app/publish --no-restore
+ARG CONFIGURATION=Release
+RUN dotnet publish src/API/Barbearia.Api.csproj -c $CONFIGURATION -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
@@ -23,3 +24,11 @@ ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Barbearia.Api.dll"]
+
+FROM runtime AS debug
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl unzip \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -sSL https://aka.ms/getvsdbgsh -o /tmp/getvsdbg.sh \
+    && bash /tmp/getvsdbg.sh -v latest -l /vsdbg \
+    && rm /tmp/getvsdbg.sh

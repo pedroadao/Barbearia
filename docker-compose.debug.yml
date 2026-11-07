@@ -1,0 +1,8 @@
+services:
+  api:
+    build:
+      target: debug
+      args:
+        CONFIGURATION: Debug
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development

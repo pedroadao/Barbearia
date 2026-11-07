@@ -18,7 +18,6 @@ internal static class InMemoryAppDbContextFactory
 
         var context = new AppDbContext(opcoes);
 
-        // Ids devem coincidir com StatusIds.Ativo/Excluido (seedados via migration em produção).
         var statusAtivo = new Status("Ativo");
         var statusExcluido = new Status("Excluído");
         context.Status.AddRange(statusAtivo, statusExcluido);

@@ -57,6 +57,7 @@ public sealed class ClienteService(IClienteDao clienteDao) : IClienteService
         int id,
         UpdateClienteDto dto,
         string authUserId,
+        bool ehAdministrador,
         CancellationToken cancellationToken)
     {
         var cliente = await clienteDao.GetByIdAsync(id, cancellationToken);
@@ -64,9 +65,9 @@ public sealed class ClienteService(IClienteDao clienteDao) : IClienteService
         if (cliente is null)
             return Result.Failure<ClienteDto>(DomainErrors.Cliente.NotFound(id));
 
-        if (cliente.AuthUserId != authUserId)
+        if (!ehAdministrador && cliente.AuthUserId != authUserId)
             return Result.Failure<ClienteDto>(
-                DomainErrors.Cliente.NotFound(id)); // não revela a outro usuário que o id existe
+                DomainErrors.Cliente.NotFound(id));
 
         var atualizado = await clienteDao.UpdateAsync(
             id,
