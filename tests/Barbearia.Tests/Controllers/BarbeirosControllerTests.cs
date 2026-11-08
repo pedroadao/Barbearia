@@ -2,6 +2,7 @@ using Barbearia.Api.Controllers;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Service;
+using Barbearia.Tests.Fakes;
 using Barbearia.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ public sealed class BarbeirosControllerTests
     {
         var context = InMemoryAppDbContextFactory.Criar();
         var dao = new BarbeiroDao(context);
-        var service = new BarbeiroService(dao);
+        var service = new BarbeiroService(dao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher());
 
         return new BarbeirosController(service);
     }
@@ -69,11 +70,14 @@ public sealed class BarbeirosControllerTests
         var context = InMemoryAppDbContextFactory.Criar();
         var barbeiroDao = new BarbeiroDao(context);
         var clienteDao = new ClienteDao(context);
-        var controller = new BarbeirosController(new BarbeiroService(barbeiroDao));
+        var usuarioDao = new UsuarioDao(context);
+        var controller = new BarbeirosController(
+            new BarbeiroService(barbeiroDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()));
 
         await controller.Create(CriarDtoValido(), CancellationToken.None);
 
-        var clientesController = new ClientesController(new ClienteService(clienteDao))
+        var clientesController = new ClientesController(
+            new ClienteService(clienteDao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()))
         {
             ControllerContext = new ControllerContext
             {

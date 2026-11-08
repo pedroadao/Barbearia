@@ -6,6 +6,10 @@ public interface IUsuarioDao
 {
     Task<Usuario?> GetByIdAsync(int id, CancellationToken cancellationToken);
 
+    Task<Usuario?> GetByAuthUserIdAsync(string authUserId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Usuario>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<Usuario>> GetAllAsync(CancellationToken cancellationToken);
 
     Task<Usuario> AddAsync(Usuario usuario, CancellationToken cancellationToken);

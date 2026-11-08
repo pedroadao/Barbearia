@@ -20,7 +20,6 @@ public interface IClienteDao
         string? instagram,
         DateOnly dataNascimento,
         int idTipoUsuario,
-        bool mostrarCadastroSempre,
         CancellationToken cancellationToken);
 
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken);

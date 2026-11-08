@@ -35,7 +35,6 @@ public class Usuario
 
     public TipoUsuario? TipoUsuario { get; private set; }
     public string? AuthUserId { get; private set; }
-    public bool MostrarCadastroSempre { get; private set; } = true;
     public int IdStatus { get; private set; } = StatusIds.Ativo;
     public Status? Status { get; private set; }
 
@@ -52,11 +51,6 @@ public class Usuario
     public void MarcarComoExcluido()
     {
         IdStatus = StatusIds.Excluido;
-    }
-
-    public void DefinirPreferenciaCadastro(bool mostrarCadastroSempre)
-    {
-        MostrarCadastroSempre = mostrarCadastroSempre;
     }
 
     public void Atualizar(

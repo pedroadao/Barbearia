@@ -3,6 +3,7 @@ using Barbearia.Api.Controllers;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Service;
+using Barbearia.Tests.Fakes;
 using Barbearia.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -20,7 +21,8 @@ public sealed class ClientesControllerTests
     {
         context ??= InMemoryAppDbContextFactory.Criar();
         var dao = new ClienteDao(context);
-        var service = new ClienteService(dao);
+        var usuarioDao = new UsuarioDao(context);
+        var service = new ClienteService(dao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher());
 
         var controller = new ClientesController(service);
 
@@ -46,7 +48,7 @@ public sealed class ClientesControllerTests
 
     private static UpdateClienteDto CriarDtoAtualizadoValido() => new(
         "Maria Oliveira", "maria.oliveira@email.com", "11911112222", "@mariaoliveira",
-        new DateOnly(1995, 3, 10), InMemoryAppDbContextFactory.IdTipoUsuarioCliente, MostrarCadastroSempre: false);
+        new DateOnly(1995, 3, 10), InMemoryAppDbContextFactory.IdTipoUsuarioCliente);
 
     [Fact]
     public async Task Create_DeveRetornarCreatedComIdGeradoPeloBanco()
@@ -126,7 +128,6 @@ public sealed class ClientesControllerTests
         var ok = resultado.Should().BeOfType<OkObjectResult>().Subject;
         var dto = ok.Value.Should().BeOfType<ClienteDto>().Subject;
         dto.Nome.Should().Be("Maria Oliveira");
-        dto.MostrarCadastroSempre.Should().BeFalse();
     }
 
     [Fact]

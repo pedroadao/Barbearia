@@ -2,6 +2,7 @@ using Barbearia.Api.Controllers;
 using Barbearia.Application.DTO;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Service;
+using Barbearia.Tests.Fakes;
 using Barbearia.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ public sealed class AgendamentosControllerTests
     {
         var context = InMemoryAppDbContextFactory.Criar();
         var dao = new CalendarioDao(context);
-        var service = new CalendarioService(dao);
+        var service = new CalendarioService(dao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher());
 
         return new AgendamentosController(service);
     }

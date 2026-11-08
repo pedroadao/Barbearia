@@ -73,6 +73,45 @@ namespace Barbearia.Infrastructure.Migrations
                     b.ToTable("calendario", (string)null);
                 });
 
+            modelBuilder.Entity("Barbearia.Domain.Entities.LogAlteracao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Dados")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("dados");
+
+                    b.Property<DateTime>("DataAlteracao")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("data_alteracao");
+
+                    b.Property<int>("IdUsuario")
+                        .HasColumnType("integer")
+                        .HasColumnName("id_usuario");
+
+                    b.Property<string>("Metodo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("metodo");
+
+                    b.Property<string>("Tabela")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tabela");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("log_alteracao", (string)null);
+                });
+
             modelBuilder.Entity("Barbearia.Domain.Entities.Status", b =>
                 {
                     b.Property<int>("Id")
@@ -169,12 +208,6 @@ namespace Barbearia.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("instagram");
-
-                    b.Property<bool>("MostrarCadastroSempre")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true)
-                        .HasColumnName("mostrar_cadastro_sempre");
 
                     b.Property<string>("Nome")
                         .IsRequired()

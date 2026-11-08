@@ -9,8 +9,7 @@ public sealed record ClienteDto(
     string Telefone,
     string? Instagram,
     DateOnly DataNascimento,
-    int IdTipoUsuario,
-    bool MostrarCadastroSempre);
+    int IdTipoUsuario);
 
 public sealed record CreateClienteDto(
     string Nome,
@@ -26,8 +25,7 @@ public sealed record UpdateClienteDto(
     string Telefone,
     string? Instagram,
     DateOnly DataNascimento,
-    int IdTipoUsuario,
-    bool MostrarCadastroSempre);
+    int IdTipoUsuario);
 
 public static class ClienteMappingExtensions
 {
@@ -38,6 +36,5 @@ public static class ClienteMappingExtensions
         cliente.Telefone,
         cliente.Instagram,
         cliente.DataNascimento,
-        cliente.IdTipoUsuario,
-        cliente.MostrarCadastroSempre);
+        cliente.IdTipoUsuario);
 }

@@ -16,6 +16,20 @@ services:
       timeout: 5s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - barbearia_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -23,6 +37,8 @@ services:
     restart: unless-stopped
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
@@ -34,6 +50,7 @@ services:
       # Diferente de Authority: é a URL pela qual o navegador acessa o Authentication
       # e que por isso fica no "iss" dos tokens emitidos.
       Authentication__Issuer: "https://localhost:8443/"
+      RabbitMq__HostName: "rabbitmq"
     ports:
       - "${API_PORT}:8080"
     extra_hosts:
@@ -61,3 +78,4 @@ services:
 
 volumes:
   barbearia_postgres_data:
+  barbearia_rabbitmq_data:

@@ -46,11 +46,6 @@ public sealed class UsuarioMapping : IEntityTypeConfiguration<Usuario>
             .HasColumnName("auth_user_id")
             .HasMaxLength(100);
 
-        builder.Property(u => u.MostrarCadastroSempre)
-            .HasColumnName("mostrar_cadastro_sempre")
-            .HasDefaultValue(true)
-            .IsRequired();
-
         builder.Property(u => u.IdStatus)
             .HasColumnName("id_status")
             .HasDefaultValue(StatusIds.Ativo)

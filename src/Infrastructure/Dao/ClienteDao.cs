@@ -12,7 +12,9 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
         var usuario = await context.Usuarios
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                u => u.Id == id && u.IdStatus == StatusIds.Ativo,
+                u => u.Id == id
+                    && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente
+                    && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         return usuario is null ? null : ParaCliente(usuario);
@@ -23,7 +25,9 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
         var usuario = await context.Usuarios
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                u => u.AuthUserId == authUserId && u.IdStatus == StatusIds.Ativo,
+                u => u.AuthUserId == authUserId
+                    && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Cliente
+                    && u.IdStatus == StatusIds.Ativo,
                 cancellationToken);
 
         return usuario is null ? null : ParaCliente(usuario);
@@ -65,7 +69,6 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
         string? instagram,
         DateOnly dataNascimento,
         int idTipoUsuario,
-        bool mostrarCadastroSempre,
         CancellationToken cancellationToken)
     {
         var usuario = await context.Usuarios
@@ -77,7 +80,6 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
             return false;
 
         usuario.Atualizar(nome, email, telefone, instagram, dataNascimento, idTipoUsuario);
-        usuario.DefinirPreferenciaCadastro(mostrarCadastroSempre);
         await context.SaveChangesAsync(cancellationToken);
 
         return true;
@@ -111,7 +113,6 @@ public sealed class ClienteDao(AppDbContext context) : IClienteDao
 
         cliente.DefinirId(usuario.Id);
         cliente.AssociarAuthUser(usuario.AuthUserId);
-        cliente.DefinirPreferenciaCadastro(usuario.MostrarCadastroSempre);
 
         return cliente;
     }

@@ -38,6 +38,11 @@ public static class DomainErrors
 
         public static Error JaAssociado() =>
             Error.Conflict("Cliente.JaAssociado", "O usuário autenticado já possui um cadastro de cliente.");
+
+        public static Error ContaDeOutroTipo() =>
+            Error.Conflict(
+                "Cliente.ContaDeOutroTipo",
+                "O usuário autenticado já possui um cadastro de outro tipo (barbeiro ou administrador) e não pode completar um cadastro de cliente.");
     }
 
     public static class Calendario

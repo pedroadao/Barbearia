@@ -1,7 +1,10 @@
 using Barbearia.Api.Authorization;
+using Barbearia.Application.Abstractions;
 using Barbearia.Infrastructure;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Dao.Interface;
+using Barbearia.Infrastructure.Messaging;
+using Barbearia.Infrastructure.Security;
 using Barbearia.Infrastructure.Service;
 using Barbearia.Infrastructure.Service.Interface;
 using FluentValidation;
@@ -91,6 +94,7 @@ builder.Services.AddScoped<IUsuarioDao, UsuarioDao>();
 builder.Services.AddScoped<IBarbeiroDao, BarbeiroDao>();
 builder.Services.AddScoped<IClienteDao, ClienteDao>();
 builder.Services.AddScoped<ICalendarioDao, CalendarioDao>();
+builder.Services.AddScoped<ILogAlteracaoDao, LogAlteracaoDao>();
 
 builder.Services.AddScoped<IStatusService, StatusService>();
 builder.Services.AddScoped<ITipoUsuarioService, TipoUsuarioService>();
@@ -98,6 +102,16 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IBarbeiroService, BarbeiroService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<ICalendarioService, CalendarioService>();
+builder.Services.AddScoped<ILogAlteracaoService, LogAlteracaoService>();
+
+// RabbitMQ / Log de Alterações
+builder.Services.Configure<RabbitMqOptions>(
+    builder.Configuration.GetSection(RabbitMqOptions.SectionName));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
+builder.Services.AddScoped<ILogAlteracaoPublisher, RabbitMqLogAlteracaoPublisher>();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddHostedService<LogAlteracaoConsumer>();
 
 var app = builder.Build();
 
