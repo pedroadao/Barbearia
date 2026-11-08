@@ -11,8 +11,10 @@ namespace Barbearia.Infrastructure.Service;
 
 public sealed class CalendarioService(
     ICalendarioDao calendarioDao,
+    IUsuarioDao usuarioDao,
     ICurrentUserService currentUserService,
-    ILogAlteracaoPublisher logPublisher) : ICalendarioService
+    ILogAlteracaoPublisher logPublisher,
+    IWhatsAppNotificationService whatsAppNotificationService) : ICalendarioService
 {
     private static readonly TimeOnly HoraAbertura = new(9, 0);
     private static readonly TimeOnly HoraFechamento = new(19, 0);
@@ -73,6 +75,7 @@ public sealed class CalendarioService(
         var criadoDto = criado.ToDto();
 
         await PublicarLogAsync(TipoOperacaoLog.Criado, criadoDto, cancellationToken);
+        await NotificarBarbeiroAsync(criado, cancellationToken);
 
         return criadoDto;
     }
@@ -128,6 +131,23 @@ public sealed class CalendarioService(
         await PublicarLogAsync(TipoOperacaoLog.Excluido, new { Id = id }, cancellationToken);
 
         return Result.Success();
+    }
+
+    private async Task NotificarBarbeiroAsync(Calendario calendario, CancellationToken cancellationToken)
+    {
+        if (calendario.IdCliente is null)
+            return;
+
+        var barbeiro = await usuarioDao.GetByIdAsync(calendario.IdBarbeiro, cancellationToken);
+        if (barbeiro is null || string.IsNullOrWhiteSpace(barbeiro.Telefone))
+            return;
+
+        var cliente = await usuarioDao.GetByIdAsync(calendario.IdCliente.Value, cancellationToken);
+        var nomeCliente = cliente?.Nome ?? "Cliente";
+
+        var mensagem = $"Novo agendamento: {nomeCliente} em {calendario.Data:dd/MM/yyyy} às {calendario.HoraInicio:HH:mm}.";
+
+        await whatsAppNotificationService.EnviarAsync(barbeiro.Telefone, mensagem, cancellationToken);
     }
 
     private async Task PublicarLogAsync(

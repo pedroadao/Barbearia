@@ -113,6 +113,17 @@ builder.Services.AddScoped<ILogAlteracaoPublisher, RabbitMqLogAlteracaoPublisher
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddHostedService<LogAlteracaoConsumer>();
 
+// WhatsApp (notificação ao barbeiro sobre novos agendamentos)
+builder.Services.Configure<WhatsAppOptions>(
+    builder.Configuration.GetSection(WhatsAppOptions.SectionName));
+builder.Services.AddHttpClient<IWhatsAppNotificationService, WhatsAppNotificationService>((serviceProvider, client) =>
+{
+    var whatsAppOptions = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<WhatsAppOptions>>().Value;
+    client.BaseAddress = new Uri(whatsAppOptions.BaseUrl);
+    client.DefaultRequestHeaders.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", whatsAppOptions.AccessToken);
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

@@ -15,7 +15,12 @@ public sealed class AgendamentosControllerTests
     {
         var context = InMemoryAppDbContextFactory.Criar();
         var dao = new CalendarioDao(context);
-        var service = new CalendarioService(dao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher());
+        var service = new CalendarioService(
+            dao,
+            new UsuarioDao(context),
+            new FakeCurrentUserService(),
+            new FakeLogAlteracaoPublisher(),
+            new FakeWhatsAppNotificationService());
 
         return new AgendamentosController(service);
     }
