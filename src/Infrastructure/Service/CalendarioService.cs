@@ -14,10 +14,19 @@ public sealed class CalendarioService(
     IUsuarioDao usuarioDao,
     ICurrentUserService currentUserService,
     ILogAlteracaoPublisher logPublisher,
-    IWhatsAppNotificationService whatsAppNotificationService) : ICalendarioService
+    IWhatsAppNotificationService whatsAppNotificationService,
+    Func<DateTime>? agora = null) : ICalendarioService
 {
     private static readonly TimeOnly HoraAbertura = new(9, 0);
     private static readonly TimeOnly HoraFechamento = new(19, 0);
+
+    // O container roda em UTC independentemente do fuso do host, mas o horário comercial
+    // (09:00-19:00) é referente ao horário de Brasília; por isso convertemos explicitamente
+    // em vez de usar DateTime.Now (que seguiria o fuso do SO, não o do negócio).
+    private static readonly TimeZoneInfo FusoHorarioBrasil = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
+
+    private readonly Func<DateTime> obterAgora =
+        agora ?? (() => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, FusoHorarioBrasil));
 
     private static Error? ValidarHorario(TimeOnly horaInicio, TimeOnly horaFim)
     {
@@ -129,6 +138,93 @@ public sealed class CalendarioService(
             return Result.Failure(DomainErrors.Calendario.NotFound(id));
 
         await PublicarLogAsync(TipoOperacaoLog.Excluido, new { Id = id }, cancellationToken);
+
+        return Result.Success();
+    }
+
+    private static TimeOnly ArredondarParaProximoIntervalo(TimeOnly hora)
+    {
+        var minutosTotais = (hora.Hour * 60) + hora.Minute;
+        var resto = minutosTotais % 30;
+
+        if (resto == 0 && hora.Second == 0 && hora.Millisecond == 0)
+            return new TimeOnly(hora.Hour, hora.Minute);
+
+        var minutosArredondados = minutosTotais - resto + 30;
+
+        return new TimeOnly(0, 0).Add(TimeSpan.FromMinutes(minutosArredondados));
+    }
+
+    public async Task<Result<CalendarioDto>> AdicionarClienteAvulsoAsync(
+        int idBarbeiro,
+        string nomeCliente,
+        CancellationToken cancellationToken)
+    {
+        var barbeiro = await usuarioDao.GetByIdAsync(idBarbeiro, cancellationToken);
+        if (barbeiro is null)
+            return Result.Failure<CalendarioDto>(DomainErrors.Barbeiro.NotFound(idBarbeiro));
+
+        var agoraAtual = obterAgora();
+        var hoje = DateOnly.FromDateTime(agoraAtual);
+        var horaInicio = ArredondarParaProximoIntervalo(TimeOnly.FromDateTime(agoraAtual));
+        if (horaInicio < HoraAbertura)
+            horaInicio = HoraAbertura;
+
+        while (true)
+        {
+            var horaFim = horaInicio.AddMinutes(30);
+
+            var erroHorario = ValidarHorario(horaInicio, horaFim);
+            if (erroHorario is not null)
+                return Result.Failure<CalendarioDto>(erroHorario);
+
+            var existente = await calendarioDao.ObterPorHorarioAsync(idBarbeiro, hoje, horaInicio, cancellationToken);
+
+            if (existente is null)
+            {
+                var novoHorario = new Calendario(
+                    idBarbeiro, hoje, horaInicio, horaFim, idCliente: null, disponivel: false, nomeClienteAvulso: nomeCliente);
+
+                var criado = await calendarioDao.AddAsync(novoHorario, cancellationToken);
+                var criadoDto = criado.ToDto();
+
+                await PublicarLogAsync(TipoOperacaoLog.Criado, criadoDto, cancellationToken);
+
+                return criadoDto;
+            }
+
+            if (existente.Disponivel)
+            {
+                var reservado = await calendarioDao.ReservarClienteAvulsoAsync(existente.Id, nomeCliente, cancellationToken);
+                if (!reservado)
+                    return Result.Failure<CalendarioDto>(DomainErrors.Calendario.NotFound(existente.Id));
+
+                var reservadoCompleto = (await calendarioDao.GetByIdAsync(existente.Id, cancellationToken))!;
+                var reservadoDto = reservadoCompleto.ToDto();
+
+                await PublicarLogAsync(TipoOperacaoLog.Criado, reservadoDto, cancellationToken);
+
+                return reservadoDto;
+            }
+
+            horaInicio = horaInicio.AddMinutes(30);
+        }
+    }
+
+    public async Task<Result> ReordenarFilaAsync(
+        int idBarbeiro,
+        DateOnly data,
+        IReadOnlyList<int> idsEmOrdem,
+        CancellationToken cancellationToken)
+    {
+        var sucesso = await calendarioDao.ReordenarFilaAsync(idBarbeiro, data, idsEmOrdem, cancellationToken);
+        if (!sucesso)
+            return Result.Failure(DomainErrors.Calendario.FilaInvalida());
+
+        await PublicarLogAsync(
+            TipoOperacaoLog.Atualizado,
+            new { IdBarbeiro = idBarbeiro, Data = data, IdsEmOrdem = idsEmOrdem },
+            cancellationToken);
 
         return Result.Success();
     }

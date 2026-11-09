@@ -27,7 +27,7 @@ public sealed class BarbeiroServiceLogTests
         var context = InMemoryAppDbContextFactory.Criar();
         var publisher = new FakeLogAlteracaoPublisher();
         var dao = new BarbeiroDao(context);
-        var service = new BarbeiroService(dao, new FakeCurrentUserService(idUsuario: 7), publisher);
+        var service = new BarbeiroService(dao, new UsuarioDao(context), new FakeCurrentUserService(idUsuario: 7), publisher);
         var criado = await service.CriarAsync(CriarDtoValido(), CancellationToken.None);
 
         var resultado = await service.AtualizarAsync(criado.Value.Id, CriarDtoAtualizadoValido(), CancellationToken.None);
@@ -46,7 +46,7 @@ public sealed class BarbeiroServiceLogTests
         var context = InMemoryAppDbContextFactory.Criar();
         var publisher = new FakeLogAlteracaoPublisher();
         var dao = new BarbeiroDao(context);
-        var service = new BarbeiroService(dao, new FakeCurrentUserService(idUsuario: 7), publisher);
+        var service = new BarbeiroService(dao, new UsuarioDao(context), new FakeCurrentUserService(idUsuario: 7), publisher);
         var criado = await service.CriarAsync(CriarDtoValido(), CancellationToken.None);
 
         var resultado = await service.RemoverAsync(criado.Value.Id, CancellationToken.None);
@@ -61,7 +61,7 @@ public sealed class BarbeiroServiceLogTests
     {
         var context = InMemoryAppDbContextFactory.Criar();
         var publisher = new FakeLogAlteracaoPublisher();
-        var service = new BarbeiroService(new BarbeiroDao(context), new FakeCurrentUserService(), publisher);
+        var service = new BarbeiroService(new BarbeiroDao(context), new UsuarioDao(context), new FakeCurrentUserService(), publisher);
 
         var resultado = await service.RemoverAsync(999, CancellationToken.None);
 

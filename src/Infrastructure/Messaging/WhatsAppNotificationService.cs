@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using Barbearia.Application.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,7 +13,9 @@ public sealed class WhatsAppNotificationService(
 {
     public async Task EnviarAsync(string telefoneDestino, string mensagem, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(telefoneDestino))
+        var telefoneApenasDigitos = Regex.Replace(telefoneDestino ?? string.Empty, "[^0-9]", "");
+
+        if (string.IsNullOrWhiteSpace(telefoneApenasDigitos))
         {
             logger.LogWarning("Envio de WhatsApp ignorado: telefone de destino não informado.");
             return;
@@ -25,13 +28,13 @@ public sealed class WhatsAppNotificationService(
             var payload = new
             {
                 messaging_product = "whatsapp",
-                to = telefoneDestino,
+                to = telefoneApenasDigitos,
                 type = "text",
                 text = new { body = mensagem },
             };
 
             using var resposta = await httpClient.PostAsJsonAsync(
-                $"/{phoneNumberId}/messages",
+                $"{phoneNumberId}/messages",
                 payload,
                 cancellationToken);
 

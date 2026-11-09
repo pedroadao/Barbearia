@@ -14,7 +14,8 @@ public sealed class Calendario
         TimeOnly horaInicio,
         TimeOnly horaFim,
         int? idCliente,
-        bool disponivel)
+        bool disponivel,
+        string? nomeClienteAvulso = null)
     {
         IdBarbeiro = idBarbeiro;
         Data = data;
@@ -22,6 +23,7 @@ public sealed class Calendario
         HoraFim = horaFim;
         IdCliente = idCliente;
         Disponivel = disponivel;
+        NomeClienteAvulso = nomeClienteAvulso;
     }
 
     public int Id { get; private set; }
@@ -38,6 +40,8 @@ public sealed class Calendario
 
     public bool Disponivel { get; private set; }
 
+    public string? NomeClienteAvulso { get; private set; }
+
     public Usuario? Barbeiro { get; private set; }
 
     public Usuario? Cliente { get; private set; }
@@ -49,5 +53,18 @@ public sealed class Calendario
     public void MarcarComoExcluido()
     {
         IdStatus = StatusIds.Excluido;
+    }
+
+    public void ReservarParaClienteAvulso(string nomeClienteAvulso)
+    {
+        IdCliente = null;
+        NomeClienteAvulso = nomeClienteAvulso;
+        Disponivel = false;
+    }
+
+    public void TransferirCliente(int? idCliente, string? nomeClienteAvulso)
+    {
+        IdCliente = idCliente;
+        NomeClienteAvulso = nomeClienteAvulso;
     }
 }

@@ -44,4 +44,22 @@ public sealed class AgendamentosController(ICalendarioService calendarioService)
 
         return resultado.IsSuccess ? NoContent() : resultado.ToErrorActionResult(this);
     }
+
+    [HttpPost("fila/cliente-avulso")]
+    public async Task<IActionResult> AdicionarClienteAvulso(AdicionarClienteAvulsoDto dto, CancellationToken cancellationToken)
+    {
+        var resultado = await calendarioService.AdicionarClienteAvulsoAsync(dto.IdBarbeiro, dto.NomeCliente, cancellationToken);
+
+        return resultado.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = resultado.Value.Id }, resultado.Value)
+            : resultado.ToErrorActionResult(this);
+    }
+
+    [HttpPut("fila/reordenar")]
+    public async Task<IActionResult> ReordenarFila(ReordenarFilaDto dto, CancellationToken cancellationToken)
+    {
+        var resultado = await calendarioService.ReordenarFilaAsync(dto.IdBarbeiro, dto.Data, dto.IdsEmOrdem, cancellationToken);
+
+        return resultado.IsSuccess ? NoContent() : resultado.ToErrorActionResult(this);
+    }
 }

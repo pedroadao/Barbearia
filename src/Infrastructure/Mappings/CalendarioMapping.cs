@@ -34,6 +34,10 @@ public sealed class CalendarioMapping : IEntityTypeConfiguration<Calendario>
         builder.Property(c => c.IdCliente)
             .HasColumnName("id_cliente");
 
+        builder.Property(c => c.NomeClienteAvulso)
+            .HasColumnName("nome_cliente_avulso")
+            .HasMaxLength(200);
+
         builder.Property(c => c.Disponivel)
             .HasColumnName("disponivel")
             .IsRequired();
@@ -44,7 +48,8 @@ public sealed class CalendarioMapping : IEntityTypeConfiguration<Calendario>
             .IsRequired();
 
         builder.HasIndex(c => new { c.IdBarbeiro, c.Data, c.HoraInicio })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter($"id_status = {StatusIds.Ativo}");
 
         builder.HasOne(c => c.Barbeiro)
             .WithMany()

@@ -61,6 +61,11 @@ namespace Barbearia.Infrastructure.Migrations
                         .HasDefaultValue(1)
                         .HasColumnName("id_status");
 
+                    b.Property<string>("NomeClienteAvulso")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nome_cliente_avulso");
+
                     b.HasKey("Id");
 
                     b.HasIndex("IdCliente");
@@ -68,7 +73,8 @@ namespace Barbearia.Infrastructure.Migrations
                     b.HasIndex("IdStatus");
 
                     b.HasIndex("IdBarbeiro", "Data", "HoraInicio")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("id_status = 1");
 
                     b.ToTable("calendario", (string)null);
                 });

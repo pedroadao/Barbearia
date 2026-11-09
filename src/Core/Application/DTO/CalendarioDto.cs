@@ -9,7 +9,8 @@ public sealed record CalendarioDto(
     TimeOnly HoraInicio,
     TimeOnly HoraFim,
     int? IdCliente,
-    bool Disponivel);
+    bool Disponivel,
+    string? NomeClienteAvulso);
 
 public sealed record CreateCalendarioDto(
     int IdBarbeiro,
@@ -26,6 +27,10 @@ public sealed record UpdateCalendarioDto(
     int? IdCliente,
     bool Disponivel);
 
+public sealed record AdicionarClienteAvulsoDto(int IdBarbeiro, string NomeCliente);
+
+public sealed record ReordenarFilaDto(int IdBarbeiro, DateOnly Data, IReadOnlyList<int> IdsEmOrdem);
+
 public static class CalendarioMappingExtensions
 {
     public static CalendarioDto ToDto(this Calendario calendario) => new(
@@ -35,5 +40,6 @@ public static class CalendarioMappingExtensions
         calendario.HoraInicio,
         calendario.HoraFim,
         calendario.IdCliente,
-        calendario.Disponivel);
+        calendario.Disponivel,
+        calendario.NomeClienteAvulso);
 }

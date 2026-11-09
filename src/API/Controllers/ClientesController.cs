@@ -11,7 +11,7 @@ namespace Barbearia.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("clientes")]
-public sealed class ClientesController(IClienteService clienteService) : ControllerBase
+public sealed class ClientesController(IClienteService clienteService, IBarbeiroService barbeiroService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
@@ -48,6 +48,24 @@ public sealed class ClientesController(IClienteService clienteService) : Control
         var authUserId = ObterAuthUserId();
         if (authUserId is null)
             return Unauthorized();
+
+        // O usuário autenticado já é um barbeiro (login associado em um acesso anterior):
+        // retorna o cadastro de barbeiro em vez de tentar criar um cliente.
+        var barbeiroExistente = await barbeiroService.ObterPorAuthUserIdAsync(authUserId, cancellationToken);
+        if (barbeiroExistente.IsSuccess)
+            return Ok(barbeiroExistente.Value);
+
+        // O e-mail já pertence a um barbeiro pré-cadastrado (pelo administrador) sem login
+        // associado: redireciona para a associação de conta em vez de tentar criar um cliente,
+        // o que violaria o índice único de e-mail.
+        if (await barbeiroService.ExistePendenteAssociacaoPorEmailAsync(dto.Email, cancellationToken))
+        {
+            var resultadoAssociacao = await barbeiroService.AssociarAsync(authUserId, dto.Email, cancellationToken);
+
+            return resultadoAssociacao.IsSuccess
+                ? Ok(resultadoAssociacao.Value)
+                : resultadoAssociacao.ToErrorActionResult(this);
+        }
 
         var resultado = await clienteService.CriarAsync(dto, authUserId, cancellationToken);
 

@@ -15,7 +15,8 @@ public sealed class BarbeirosControllerTests
     {
         var context = InMemoryAppDbContextFactory.Criar();
         var dao = new BarbeiroDao(context);
-        var service = new BarbeiroService(dao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher());
+        var usuarioDao = new UsuarioDao(context);
+        var service = new BarbeiroService(dao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher());
 
         return new BarbeirosController(service);
     }
@@ -72,12 +73,13 @@ public sealed class BarbeirosControllerTests
         var clienteDao = new ClienteDao(context);
         var usuarioDao = new UsuarioDao(context);
         var controller = new BarbeirosController(
-            new BarbeiroService(barbeiroDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()));
+            new BarbeiroService(barbeiroDao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()));
 
         await controller.Create(CriarDtoValido(), CancellationToken.None);
 
         var clientesController = new ClientesController(
-            new ClienteService(clienteDao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()))
+            new ClienteService(clienteDao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()),
+            new BarbeiroService(barbeiroDao, usuarioDao, new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()))
         {
             ControllerContext = new ControllerContext
             {
@@ -141,5 +143,51 @@ public sealed class BarbeirosControllerTests
         var resultado = await controller.Delete(999, CancellationToken.None);
 
         resultado.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMe_QuandoUsuarioAutenticadoNaoEhBarbeiro_DeveRetornarNotFound()
+    {
+        var context = InMemoryAppDbContextFactory.Criar();
+        var controller = new BarbeirosController(
+            new BarbeiroService(
+                new BarbeiroDao(context), new UsuarioDao(context), new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+                {
+                    User = new System.Security.Claims.ClaimsPrincipal(
+                        new System.Security.Claims.ClaimsIdentity(
+                            [new System.Security.Claims.Claim("sub", "auth-user-sem-barbeiro")], "Test")),
+                },
+            },
+        };
+
+        var resultado = await controller.GetMe(CancellationToken.None);
+
+        resultado.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task GetMe_SemUsuarioAutenticado_DeveRetornarUnauthorized()
+    {
+        var context = InMemoryAppDbContextFactory.Criar();
+        var controller = new BarbeirosController(
+            new BarbeiroService(
+                new BarbeiroDao(context), new UsuarioDao(context), new FakeCurrentUserService(), new FakeLogAlteracaoPublisher()))
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext
+                {
+                    User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity()),
+                },
+            },
+        };
+
+        var resultado = await controller.GetMe(CancellationToken.None);
+
+        resultado.Should().BeOfType<UnauthorizedResult>();
     }
 }

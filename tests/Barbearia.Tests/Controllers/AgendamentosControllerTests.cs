@@ -1,5 +1,6 @@
 using Barbearia.Api.Controllers;
 using Barbearia.Application.DTO;
+using Barbearia.Domain.Entities;
 using Barbearia.Infrastructure.Dao;
 using Barbearia.Infrastructure.Service;
 using Barbearia.Tests.Fakes;
@@ -11,9 +12,9 @@ namespace Barbearia.Tests.Controllers;
 
 public sealed class AgendamentosControllerTests
 {
-    private static AgendamentosController CriarController()
+    private static AgendamentosController CriarController(Barbearia.Infrastructure.AppDbContext? context = null)
     {
-        var context = InMemoryAppDbContextFactory.Criar();
+        context ??= InMemoryAppDbContextFactory.Criar();
         var dao = new CalendarioDao(context);
         var service = new CalendarioService(
             dao,
@@ -70,6 +71,20 @@ public sealed class AgendamentosControllerTests
             CancellationToken.None);
 
         resultado.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [Fact]
+    public async Task Create_AposExcluirHorarioNoMesmoSlot_DeveRetornarCreated()
+    {
+        var controller = CriarController();
+        var criado = (CreatedAtActionResult)await controller.Create(CriarDtoValido(), CancellationToken.None);
+        var id = ((CalendarioDto)criado.Value!).Id;
+        await controller.Delete(id, CancellationToken.None);
+
+        var resultado = await controller.Create(CriarDtoValido(), CancellationToken.None);
+
+        var created = resultado.Should().BeOfType<CreatedAtActionResult>().Subject;
+        ((CalendarioDto)created.Value!).Id.Should().NotBe(id);
     }
 
     [Fact]
@@ -169,5 +184,68 @@ public sealed class AgendamentosControllerTests
 
         var ok = resultado.Should().BeOfType<OkObjectResult>().Subject;
         ok.Value.Should().BeAssignableTo<IReadOnlyList<CalendarioDto>>().Which.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task AdicionarClienteAvulso_SemHorarioDisponivel_DeveCriarNovoHorarioEAtribuirNomeAvulso()
+    {
+        var context = InMemoryAppDbContextFactory.Criar();
+        var barbeiro = new Barbeiro(
+            "João Barbeiro", "joao@barbearia.com", "+5511999990000",
+            instagram: null, new DateOnly(1990, 1, 1), InMemoryAppDbContextFactory.IdTipoUsuarioBarbeiro);
+        context.Usuarios.Add(barbeiro);
+        await context.SaveChangesAsync();
+
+        var controller = CriarController(context);
+
+        var resultado = await controller.AdicionarClienteAvulso(
+            new AdicionarClienteAvulsoDto(barbeiro.Id, "Cliente Avulso"), CancellationToken.None);
+
+        var created = resultado.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var dto = created.Value.Should().BeOfType<CalendarioDto>().Subject;
+        dto.IdCliente.Should().BeNull();
+        dto.NomeClienteAvulso.Should().Be("Cliente Avulso");
+        dto.Disponivel.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AdicionarClienteAvulso_QuandoBarbeiroNaoExiste_DeveRetornarNotFound()
+    {
+        var controller = CriarController();
+
+        var resultado = await controller.AdicionarClienteAvulso(
+            new AdicionarClienteAvulsoDto(999, "Cliente Avulso"), CancellationToken.None);
+
+        resultado.Should().BeOfType<NotFoundObjectResult>();
+    }
+
+    [Fact]
+    public async Task ReordenarFila_QuandoListaCorresponde_DeveRetornarNoContent()
+    {
+        var controller = CriarController();
+        var primeiro = (CreatedAtActionResult)await controller.Create(
+            CriarDtoValido() with { IdCliente = 2 }, CancellationToken.None); // 09:00-10:00
+        var segundo = (CreatedAtActionResult)await controller.Create(
+            CriarDtoValido() with { IdCliente = 3, HoraInicio = new TimeOnly(10, 0), HoraFim = new TimeOnly(11, 0) },
+            CancellationToken.None);
+        var idPrimeiro = ((CalendarioDto)primeiro.Value!).Id;
+        var idSegundo = ((CalendarioDto)segundo.Value!).Id;
+
+        var resultado = await controller.ReordenarFila(
+            new ReordenarFilaDto(1, new DateOnly(2026, 11, 10), [idSegundo, idPrimeiro]), CancellationToken.None);
+
+        resultado.Should().BeOfType<NoContentResult>();
+    }
+
+    [Fact]
+    public async Task ReordenarFila_QuandoListaNaoCorresponde_DeveRetornarBadRequest()
+    {
+        var controller = CriarController();
+        await controller.Create(CriarDtoValido() with { IdCliente = 2 }, CancellationToken.None);
+
+        var resultado = await controller.ReordenarFila(
+            new ReordenarFilaDto(1, new DateOnly(2026, 11, 10), [999]), CancellationToken.None);
+
+        resultado.Should().BeOfType<BadRequestObjectResult>();
     }
 }

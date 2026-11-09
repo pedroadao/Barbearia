@@ -24,6 +24,27 @@ public sealed class CalendarioDao(AppDbContext context) : ICalendarioDao
         return calendario;
     }
 
+    public Task<Calendario?> ObterPorHorarioAsync(
+        int idBarbeiro, DateOnly data, TimeOnly horaInicio, CancellationToken cancellationToken) =>
+        context.Calendarios.AsNoTracking()
+            .FirstOrDefaultAsync(
+                c => c.IdBarbeiro == idBarbeiro && c.Data == data && c.HoraInicio == horaInicio && c.IdStatus == StatusIds.Ativo,
+                cancellationToken);
+
+    public async Task<bool> ReservarClienteAvulsoAsync(int id, string nomeClienteAvulso, CancellationToken cancellationToken)
+    {
+        var calendario = await context.Calendarios
+            .FirstOrDefaultAsync(c => c.Id == id && c.IdStatus == StatusIds.Ativo, cancellationToken);
+
+        if (calendario is null)
+            return false;
+
+        calendario.ReservarParaClienteAvulso(nomeClienteAvulso);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
     public Task<bool> ExisteConflitoAsync(
         int idBarbeiro,
         DateOnly data,
@@ -74,6 +95,43 @@ public sealed class CalendarioDao(AppDbContext context) : ICalendarioDao
             return false;
 
         calendario.MarcarComoExcluido();
+        await context.SaveChangesAsync(cancellationToken);
+
+        return true;
+    }
+
+    public async Task<IReadOnlyList<Calendario>> ObterFilaAsync(int idBarbeiro, DateOnly data, CancellationToken cancellationToken) =>
+        await context.Calendarios.AsNoTracking()
+            .Where(c => c.IdBarbeiro == idBarbeiro && c.Data == data && !c.Disponivel && c.IdStatus == StatusIds.Ativo)
+            .OrderBy(c => c.HoraInicio)
+            .ToListAsync(cancellationToken);
+
+    public async Task<bool> ReordenarFilaAsync(
+        int idBarbeiro,
+        DateOnly data,
+        IReadOnlyList<int> idsEmOrdem,
+        CancellationToken cancellationToken)
+    {
+        var entradas = await context.Calendarios
+            .Where(c => c.IdBarbeiro == idBarbeiro && c.Data == data && !c.Disponivel && c.IdStatus == StatusIds.Ativo)
+            .OrderBy(c => c.HoraInicio)
+            .ToListAsync(cancellationToken);
+
+        if (entradas.Count != idsEmOrdem.Count ||
+            !entradas.Select(e => e.Id).OrderBy(id => id).SequenceEqual(idsEmOrdem.OrderBy(id => id)))
+            return false;
+
+        var porId = entradas.ToDictionary(e => e.Id);
+        var clientesEmOrdem = idsEmOrdem
+            .Select(id => (porId[id].IdCliente, porId[id].NomeClienteAvulso))
+            .ToList();
+
+        for (var i = 0; i < entradas.Count; i++)
+        {
+            var (idCliente, nomeClienteAvulso) = clientesEmOrdem[i];
+            entradas[i].TransferirCliente(idCliente, nomeClienteAvulso);
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         return true;

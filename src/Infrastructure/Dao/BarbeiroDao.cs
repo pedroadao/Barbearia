@@ -18,6 +18,32 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
         return usuario is null ? null : ParaBarbeiro(usuario);
     }
 
+    public async Task<Barbeiro?> GetByAuthUserIdAsync(string authUserId, CancellationToken cancellationToken)
+    {
+        var usuario = await context.Usuarios
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => u.AuthUserId == authUserId
+                    && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro
+                    && u.IdStatus == StatusIds.Ativo,
+                cancellationToken);
+
+        return usuario is null ? null : ParaBarbeiro(usuario);
+    }
+
+    public async Task<Barbeiro?> GetByEmailAsync(string email, CancellationToken cancellationToken)
+    {
+        var usuario = await context.Usuarios
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => u.Email == email
+                    && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro
+                    && u.IdStatus == StatusIds.Ativo,
+                cancellationToken);
+
+        return usuario is null ? null : ParaBarbeiro(usuario);
+    }
+
     public async Task<IReadOnlyList<Barbeiro>> GetAllAsync(CancellationToken cancellationToken)
     {
         var usuarios = await context.Usuarios
@@ -39,6 +65,22 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
             barbeiro.IdTipoUsuario);
 
         await context.Usuarios.AddAsync(usuario, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+
+        return ParaBarbeiro(usuario);
+    }
+
+    public async Task<Barbeiro?> AssociarAuthUserAsync(int id, string authUserId, CancellationToken cancellationToken)
+    {
+        var usuario = await context.Usuarios
+            .FirstOrDefaultAsync(
+                u => u.Id == id && u.TipoUsuario!.Descricao == TipoUsuarioDescricoes.Barbeiro && u.IdStatus == StatusIds.Ativo,
+                cancellationToken);
+
+        if (usuario is null)
+            return null;
+
+        usuario.AssociarAuthUser(authUserId);
         await context.SaveChangesAsync(cancellationToken);
 
         return ParaBarbeiro(usuario);
@@ -95,6 +137,7 @@ public sealed class BarbeiroDao(AppDbContext context) : IBarbeiroDao
             usuario.IdTipoUsuario);
 
         barbeiro.DefinirId(usuario.Id);
+        barbeiro.AssociarAuthUser(usuario.AuthUserId);
 
         return barbeiro;
     }

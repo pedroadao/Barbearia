@@ -15,6 +15,10 @@ public sealed class UsuarioDao(AppDbContext context) : IUsuarioDao
         context.Usuarios.AsNoTracking()
             .FirstOrDefaultAsync(u => u.AuthUserId == authUserId && u.IdStatus == StatusIds.Ativo, cancellationToken);
 
+    public Task<Usuario?> GetByEmailAsync(string email, CancellationToken cancellationToken) =>
+        context.Usuarios.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email == email && u.IdStatus == StatusIds.Ativo, cancellationToken);
+
     public async Task<IReadOnlyList<Usuario>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken) =>
         await context.Usuarios.AsNoTracking()
             .Where(u => ids.Contains(u.Id))

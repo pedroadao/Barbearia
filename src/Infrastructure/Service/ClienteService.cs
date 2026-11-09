@@ -54,6 +54,10 @@ public sealed class ClienteService(
         if (usuarioDeOutroTipo is not null)
             return Result.Failure<ClienteDto>(DomainErrors.Cliente.ContaDeOutroTipo());
 
+        var usuarioComMesmoEmail = await usuarioDao.GetByEmailAsync(dto.Email, cancellationToken);
+        if (usuarioComMesmoEmail is not null)
+            return Result.Failure<ClienteDto>(DomainErrors.Cliente.EmailJaCadastrado());
+
         var cliente = new Cliente(
             dto.Nome,
             dto.Email,

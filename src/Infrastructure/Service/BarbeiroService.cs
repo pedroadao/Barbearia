@@ -11,6 +11,7 @@ namespace Barbearia.Infrastructure.Service;
 
 public sealed class BarbeiroService(
     IBarbeiroDao barbeiroDao,
+    IUsuarioDao usuarioDao,
     ICurrentUserService currentUserService,
     ILogAlteracaoPublisher logPublisher) : IBarbeiroService
 {
@@ -23,6 +24,15 @@ public sealed class BarbeiroService(
             : barbeiro.ToDto();
     }
 
+    public async Task<Result<BarbeiroDto>> ObterPorAuthUserIdAsync(string authUserId, CancellationToken cancellationToken)
+    {
+        var barbeiro = await barbeiroDao.GetByAuthUserIdAsync(authUserId, cancellationToken);
+
+        return barbeiro is null
+            ? Result.Failure<BarbeiroDto>(DomainErrors.Barbeiro.NotFoundPorAuthUser())
+            : barbeiro.ToDto();
+    }
+
     public async Task<Result<IReadOnlyList<BarbeiroDto>>> ObterTodosAsync(CancellationToken cancellationToken)
     {
         var barbeiros = await barbeiroDao.GetAllAsync(cancellationToken);
@@ -32,6 +42,10 @@ public sealed class BarbeiroService(
 
     public async Task<Result<BarbeiroDto>> CriarAsync(CreateBarbeiroDto dto, CancellationToken cancellationToken)
     {
+        var usuarioComMesmoEmail = await usuarioDao.GetByEmailAsync(dto.Email, cancellationToken);
+        if (usuarioComMesmoEmail is not null)
+            return Result.Failure<BarbeiroDto>(DomainErrors.Barbeiro.EmailJaCadastrado());
+
         var barbeiro = new Barbeiro(
             dto.Nome,
             dto.Email,
@@ -46,6 +60,38 @@ public sealed class BarbeiroService(
         await PublicarLogAsync(TipoOperacaoLog.Criado, criadoDto, cancellationToken);
 
         return criadoDto;
+    }
+
+    public async Task<Result<BarbeiroDto>> AssociarAsync(string authUserId, string email, CancellationToken cancellationToken)
+    {
+        var existente = await barbeiroDao.GetByAuthUserIdAsync(authUserId, cancellationToken);
+        if (existente is not null)
+            return Result.Failure<BarbeiroDto>(DomainErrors.Barbeiro.JaAssociado());
+
+        var usuarioDeOutroTipo = await usuarioDao.GetByAuthUserIdAsync(authUserId, cancellationToken);
+        if (usuarioDeOutroTipo is not null)
+            return Result.Failure<BarbeiroDto>(DomainErrors.Barbeiro.ContaDeOutroTipo());
+
+        var barbeiroPorEmail = await barbeiroDao.GetByEmailAsync(email, cancellationToken);
+        if (barbeiroPorEmail is null)
+            return Result.Failure<BarbeiroDto>(DomainErrors.Barbeiro.NotFoundPorEmail());
+
+        if (barbeiroPorEmail.AuthUserId is not null)
+            return Result.Failure<BarbeiroDto>(DomainErrors.Barbeiro.JaAssociado());
+
+        var associado = await barbeiroDao.AssociarAuthUserAsync(barbeiroPorEmail.Id, authUserId, cancellationToken);
+        var associadoDto = associado!.ToDto();
+
+        await PublicarLogAsync(TipoOperacaoLog.Atualizado, associadoDto, cancellationToken);
+
+        return associadoDto;
+    }
+
+    public async Task<bool> ExistePendenteAssociacaoPorEmailAsync(string email, CancellationToken cancellationToken)
+    {
+        var barbeiro = await barbeiroDao.GetByEmailAsync(email, cancellationToken);
+
+        return barbeiro is not null && barbeiro.AuthUserId is null;
     }
 
     public async Task<Result<BarbeiroDto>> AtualizarAsync(int id, UpdateBarbeiroDto dto, CancellationToken cancellationToken)

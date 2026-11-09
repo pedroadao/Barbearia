@@ -7,9 +7,15 @@ public interface IBarbeiroService
 {
     Task<Result<BarbeiroDto>> ObterPorIdAsync(int id, CancellationToken cancellationToken);
 
+    Task<Result<BarbeiroDto>> ObterPorAuthUserIdAsync(string authUserId, CancellationToken cancellationToken);
+
     Task<Result<IReadOnlyList<BarbeiroDto>>> ObterTodosAsync(CancellationToken cancellationToken);
 
     Task<Result<BarbeiroDto>> CriarAsync(CreateBarbeiroDto dto, CancellationToken cancellationToken);
+
+    Task<Result<BarbeiroDto>> AssociarAsync(string authUserId, string email, CancellationToken cancellationToken);
+
+    Task<bool> ExistePendenteAssociacaoPorEmailAsync(string email, CancellationToken cancellationToken);
 
     Task<Result<BarbeiroDto>> AtualizarAsync(int id, UpdateBarbeiroDto dto, CancellationToken cancellationToken);
 

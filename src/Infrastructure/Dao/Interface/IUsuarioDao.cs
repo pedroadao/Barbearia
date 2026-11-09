@@ -8,6 +8,8 @@ public interface IUsuarioDao
 
     Task<Usuario?> GetByAuthUserIdAsync(string authUserId, CancellationToken cancellationToken);
 
+    Task<Usuario?> GetByEmailAsync(string email, CancellationToken cancellationToken);
+
     Task<IReadOnlyList<Usuario>> GetByIdsAsync(IReadOnlyCollection<int> ids, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Usuario>> GetAllAsync(CancellationToken cancellationToken);
